@@ -1,0 +1,16 @@
+{
+    "name": "doton.project.php",
+    "version": "0.0.1",
+    "description": "",
+    "autoload":{},
+    "bin": {},
+    "php-require-version": "8.0",
+    "php-require-modules": [
+        "session"
+    ],
+    "php-require-settings": {
+        "display_errors" : { "expect": true, "validator" : "boolean" }
+    },
+    "dependencies":{},
+    "devDependencies":{}
+}
