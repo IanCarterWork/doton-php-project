@@ -43,7 +43,7 @@ trait IProps{
 
 
 
-class CoreAssetsTemplate{
+class PackageAssetsTemplate{
 
 
     public string $templateFile = '';
@@ -74,13 +74,13 @@ class CoreAssetsTemplate{
 
             ;
 
-            $this->serializes();
+            // $this->serializes();
             
             $this->template = file_get_contents( $this->templateFile );
 
         }
 
-        else{ exit('CoreAssetsTemplate : template not found " ' . $path . ' "' ); }
+        else{ exit('PackageAssetsTemplate : template not found " ' . $path . ' "' ); }
 
     }
     
@@ -97,6 +97,31 @@ class CoreAssetsTemplate{
         return $this;
         
     }
+    
+
+
+    static public function parseData( mixed $data ){
+
+        switch( gettype( $data ) ){
+
+            case 'array':
+            case 'object':
+
+                return implode( PHP_EOL, array_map( function( $entry ){
+
+                    return self::parseData( $entry );
+                    
+                }, ( array ) $data ));
+
+            break;
+            
+        }
+
+
+        return ( string ) $data;
+        
+    }
+    
     
 
     public function toString() : string | null{
@@ -128,9 +153,9 @@ class CoreAssetsTemplate{
                     
                     isset( $this->variables[ $paths[ $key ] ] ) 
                         
-                        ? $this->variables[ $paths[ $key ] ] 
+                        ? self::parseData( $this->variables[ $paths[ $key ] ] )
                         
-                        : $paths[ $key ],
+                        : self::parseData( $paths[ $key ] ),
 
                     $this->generated
                 

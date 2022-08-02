@@ -7,7 +7,9 @@ use Exception;
 use Throwable;
 use VisualKit\Badge;
 use VisualKit\Block;
+use VisualKit\FileOverview;
 use VisualKit\Table;
+use VisualKit\Text;
 
 function ShutDown(...$arguments){
 
@@ -95,9 +97,9 @@ class ExceptionConsole extends Exception{
 
     public array $blacklist = [
         
-        // 'Doton\Core\Error\Handler',
+        'Doton\Core\Error\Handler',
         
-        // 'Doton\Core\Error\ShutDown',
+        'Doton\Core\Error\ShutDown',
 
         // 'Doton\Core\Error\ExceptionConsole',
 
@@ -128,6 +130,10 @@ class ExceptionConsole extends Exception{
 
         if( class_exists( '\VisualKit\Console' ) ){
 
+            $file = $file ?: $this->file;
+
+            $line = $line ?: $this->line;
+
             $composite = '';
         
             $composite .= Block::box( 
@@ -142,43 +148,105 @@ class ExceptionConsole extends Exception{
                 
                 "File", 
                 
-                ( $file ?: $this->file ) . " " . Badge::error( 'Line  ' . ( $line ?: $this->line ) ) 
+                ( $file ) . " " . Badge::error( 'Line  ' . ( $line ) ) 
+            
+            );
+    
+
+
+
+            // $finalLine = ( $this->code == 1) ? $line - 1 : $line;
+
+            $overview = FileOverview::view( 
+                
+                $file, 
+
+                function ($ln, $data, $is){
+
+                    return [
+                    
+                        'line' => $ln,
+                    
+                        'data' => $data,
+                    
+                        'is' => $is ? true : false,
+                    
+                    ];
+
+                },
+                
+                $line, 
+                
+                4
+
+            );
+
+
+            $overviewCode = [];
+
+            foreach( $overview as $payload ){
+
+                $overviewCode[] = '' . 
+                
+                    htmlentities( str_replace( "\n", "", $payload[ 'data' ] ) ) . '';
+                
+            }
+            
+            $composite .= Block::high( 
+                
+                "Overview", 
+                
+                '<div style="position: relative;">' . 
+                
+                '<pre 
+                    id="VisualkitCodeOverview" 
+                    class="line-numbers linkable-line-numbers line-highlight" 
+                    data-line-offset="22-25"
+                    data-start="' . FileOverview::$from + 1 . '"
+                    linkable-line-numbers 
+                ><code class="language-php" >' . implode( "\n", $overviewCode ) . '</code></pre>' . 
+
+                '</div>'
             
             );
     
     
+            $traces = array_reverse( $this->getTrace() );
     
-            $table = new Table();
+            if( count( $traces) > 1 ){
     
-            $table->column('#');
-    
-            $table->column('Function');
-            
-            $table->column('File');
-            
-            $table->column('Line');
-            
-            foreach( array_reverse( $this->getTrace() ) as $trace ){
-    
-                if( in_array( $trace['function'], $this->blacklist ) ){ continue; }
+                $table = new Table();
+        
+                $table->column('#');
+        
+                $table->column('Function');
                 
-                $table->row(
-    
-                    '↓',
-    
-                    $trace['function'] ?: 'NaN',
+                $table->column('File');
+                
+                $table->column('Line');
+                
+                foreach( $traces  as $trace ){
+        
+                    if( in_array( $trace['function'], $this->blacklist ) ){ continue; }
                     
-                    isset( $trace['file'] ) ? $trace['file']: 'NaN',
-                    
-                    isset( $trace['line'] ) ? $trace['line'] : 'NaN',
-                    
-                );
+                    $table->row(
+        
+                        '↓',
+        
+                        $trace['function'] ?: 'NaN',
+                        
+                        isset( $trace['file'] ) ? $trace['file']: 'NaN',
+                        
+                        isset( $trace['line'] ) ? $trace['line'] : 'NaN',
+                        
+                    );
+        
+                }
+                
+                $composite .= Block::box( "Stack Traces", $table->toString() );
     
             }
-            
-            $composite .= Block::box( "Stack Traces", $table->toString() );
-    
-    
+                
     
             $console = method_exists( Console::class, $this->color );
             
@@ -226,7 +294,7 @@ class ExceptionConsole extends Exception{
 
     public function __toString() {
 
-        return "\n" . __CLASS__ . ": [{$this->code}]: {$this->message}\n";
+        return "\n" . __CLASS__ . ": [{$this->code}]: {$this->message} - ( {$this->file} {$this->line} )\n";
 
     }
     

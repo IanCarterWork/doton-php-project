@@ -94,6 +94,28 @@ $DOTON_CORE_ERROR_HANDLER = set_error_handler("Doton\Core\Error\Handler", E_ALL)
 
 
 
+/**
+ * 
+ * --------------------------------------
+ * |                                    |
+ * |    Defines Configurations          |
+ * |                                    |
+ * --------------------------------------
+ * 
+ */
+
+$config = config();
+
+$dotonrequire = ( isset( $config->doton ) && is_object( $config->doton ) )
+
+    ? $config->doton : (object) [];
+
+
+$phprequire = ( isset( $config->{'php-require'} ) && is_object( $config->{'php-require'} ) )
+
+    ? $config->{'php-require'} : (object) [];
+
+
 
 /**
  * 
@@ -105,44 +127,64 @@ $DOTON_CORE_ERROR_HANDLER = set_error_handler("Doton\Core\Error\Handler", E_ALL)
  * 
  */
 
-define( 'DOTON_PROJECT_VERSION', config('php-require-version') );
-
-ResourceChecker::version( true);
 
 
+define( 'DOTON_PROJECT_VERSION', ( $phprequire->version ?: null ) );
 
-/**
- * 
- * --------------------------------------------------------------
- * |                                                            |
- * |    Check the modules of PHP required for the project       |
- * |                                                            |
- * --------------------------------------------------------------
- * 
- */
+ResourceChecker::version( 
 
-define( 'DOTON_PROJECT_MODULES', (array) config('php-require-modules') ?: [] );
+    'Project requires PHP version',
 
-ResourceChecker::modules( true );
+    DOTON_PROJECT_VERSION,
 
-
-
-/**
- * 
- * --------------------------------------------------------------
- * |                                                            |
- * |    Check the modules of PHP required for the project       |
- * |                                                            |
- * --------------------------------------------------------------
- * 
- */
-
-ResourceChecker::settings( 
-    
-    (array) config('php-require-settings') ?: [], 
+    null,
     
     true 
 
+);
+
+
+
+/**
+ * 
+ * --------------------------------------------------------------
+ * |                                                            |
+ * |    Check the modules of PHP required for the project       |
+ * |                                                            |
+ * --------------------------------------------------------------
+ * 
+ */
+
+ResourceChecker::modules(
+    
+    'Project requires PHP Modules', 
+    
+    isset( $phprequire->modules ) ? (array) $phprequire->modules : [], 
+    
+    true 
+
+);
+
+
+
+/**
+ * 
+ * --------------------------------------------------------------
+ * |                                                            |
+ * |    Check the modules of PHP required for the project       |
+ * |                                                            |
+ * --------------------------------------------------------------
+ * 
+ */
+
+ResourceChecker::settings(
+
+    'Project requires PHP Settings',
+    
+     isset( $phprequire->settings ) ? (array) $phprequire->settings : [], 
+    
+    true 
+    
 );
 
 

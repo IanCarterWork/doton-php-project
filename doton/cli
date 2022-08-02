@@ -1,0 +1,39 @@
+<?php
+
+
+require dirname( __FILE__ ) . "/autoload.php";
+
+use DotonCli\Console;
+use DotonCli\Terminal;
+
+
+
+if(Terminal::Is()){
+
+
+    Console::Notice("Doton CLI", "( " . Terminal::name . " / " . Terminal::version . ", Embedded CLI )");
+
+
+    if(!isset($_SERVER['argv'])){
+
+        echo PHP_EOL . "argv is not detected!" . PHP_EOL;
+
+    }
+
+    else if( !(new Terminal())->Run( $_SERVER['argv'] ) ){
+
+        if(isset($_SERVER['argv'][1])){
+
+            echo PHP_EOL . $_SERVER['argv'][1] . " is not a Smake module!" . PHP_EOL;
+
+        }
+
+        else{ echo PHP_EOL . "Welcome to Smake" . PHP_EOL; }
+
+    }
+
+
+}
+
+
+else{ echo PHP_EOL . "Invoke Smake in CLI" . PHP_EOL; }

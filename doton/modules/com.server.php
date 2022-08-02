@@ -5,7 +5,7 @@ namespace Doton\Core\Server;
 
 
 use Doton\Core\Utilities\IValidator;
-use VisualKit\Console;
+use VisualKit\Console as VisualKitConsole;
 use VisualKit\Table;
 
 
@@ -28,17 +28,30 @@ function DetectCli(){
 class ResourceChecker{
 
 
-    static public function version( bool $exit = true ){
+    static public function version( 
 
-        if( DOTON_PROJECT_VERSION && version_compare(PHP_VERSION, DOTON_PROJECT_VERSION, '<') ){ 
+        string $label,
 
-            if(  class_exists( '\VisualKit\Console' ) ){
+        string | null $version,
 
-                Console::log( 
+        string | null $original,
+        
+        bool $exit = true 
+        
+    ){
+
+        $original = $original ?: PHP_VERSION;
+
+
+        if( $version && version_compare( $original, $version, '<') ){ 
+
+            if( class_exists( '\VisualKit\Console' ) ){
+
+                VisualKitConsole::log( 
                     
-                    'Project requires PHP version',
+                    $label,
                     
-                    "This project requires PHP version " . DOTON_PROJECT_VERSION,
+                    "Requires PHP < " . $version . ' > version',
 
                     $exit
 
@@ -48,7 +61,7 @@ class ResourceChecker{
 
             else{
 
-                exit( "This project requires PHP version " . DOTON_PROJECT_VERSION );
+                exit( $label . " : Requires PHP < " . $version . ' > version' );
                 
             }
 
@@ -64,152 +77,46 @@ class ResourceChecker{
 
 
 
-    static public function modules( bool $exit = true ){
-                
-        if( DOTON_PROJECT_MODULES && is_array( DOTON_PROJECT_MODULES ) ){ 
-
-            $found = 0;
-
-            $length = count( DOTON_PROJECT_MODULES );
-
-
-            if( class_exists( '\VisualKit\Console' ) ){
-    
-                $table = new Table();
-
-                    $table->column('Status');
-
-                    $table->column('Module');
-
-                
-
-                foreach( DOTON_PROJECT_MODULES as $name ){
-
-                    $status = extension_loaded($name);
-
-                    $table->row(
-
-                        $status,
-
-                        "" . $name . ""
-                        
-                    );
-
-                    if( $status ){ $found++; }
-
-                }
-
-                if( $found != $length ){
-
-                    Console::error( 
-                        
-                        'Project requires PHP Modules',
-                        
-                        $table->toString(),
-
-                        $exit
-
-                    );
-
-                    return false;
-
-                }
-
-            }
-
-
-            else{
-
-                foreach( DOTON_PROJECT_MODULES as $name ){
-
-                    $status = extension_loaded($name);
-
-                    if( $status ){ $found++; }
-
-                    else{
-
-                        echo "Project requires PHP Modules ( " . ($status ? 'YES' : 'NO') . ") " . $name;
-                        
-                    }
-
-                }
-
-                if( $found != $length ){
-
-                    if( $exit === true ){ exit; }
-
-                    return false;
-
-                }
-                
-            }
-            
-        }
-
-
-        return true;
+    static public function modules( 
         
-    }
-    
-    
-
-
-
-    static public function settings(
+        string $label, 
         
-        array $settings,
+        array $modules, 
         
         bool $exit = true 
         
     ){
-            
-        $ini = ini_get_all( null, false );
-    
+                
         $found = 0;
 
-        $length = count( $settings );
+        $length = count( $modules );
 
 
+        if( 
+            
+            class_exists( '\VisualKit\Console' ) &&
 
-        if( class_exists( '\VisualKit\Console' ) ){
-        
+            class_exists( '\VisualKit\Table' ) 
+            
+        ){
+
             $table = new Table();
 
                 $table->column('Status');
 
-                $table->column('Paramètre');
+                $table->column('Module');
 
-                $table->column('Require');
-                
-                $table->column('Valeur');
+            
 
+            foreach( $modules as $name ){
 
+                $status = extension_loaded($name);
 
-            foreach( $settings as $name => $setting ){
-
-                $value = $ini[ $name ];
-
-                $status = IValidator::matching(
-
-                    $setting->validator,
-
-                    $value,
-
-                    $setting->expect,
-
-                    isset( $setting->operator ) ? $setting->operator : '<=',
-
-                );
-                    
                 $table->row(
 
-                    ($status),
+                    $status,
 
-                    "" . ($name) . "",
-
-                    ("" . $setting->expect ?: 0) . "",
-
-                    "" . ($value) . "",
+                    "" . $name . ""
                     
                 );
 
@@ -217,14 +124,11 @@ class ResourceChecker{
 
             }
 
-
-
-
             if( $found != $length ){
 
-                Console::error( 
+                VisualKitConsole::error( 
                     
-                    'Project requires PHP Settings',
+                    $label,
                     
                     $table->toString(),
 
@@ -238,29 +142,18 @@ class ResourceChecker{
 
         }
 
+
         else{
 
-            foreach( $settings as $name => $setting ){
+            foreach( $modules as $name ){
 
-                $value = $ini[ $name ];
+                $status = extension_loaded($name);
 
-                $status = IValidator::matching(
-
-                    $setting->validator,
-
-                    $value,
-
-                    $setting->expect,
-
-                    isset( $setting->operator ) ? $setting->operator : '<=',
-
-                );
-                    
                 if( $status ){ $found++; }
 
                 else{
 
-                    echo "Project requires PHP Settings : ( " . ($status ? 'YES' : 'NO') . ") " . $name;
+                    echo $label . " : Requires PHP Modules ( " . ($status ? 'YES' : 'NO') . ") " . $name;
                     
                 }
 
@@ -275,8 +168,154 @@ class ResourceChecker{
             }
             
         }
+        
 
 
+
+        return true;
+        
+    }
+    
+    
+
+
+
+    static public function settings(
+        
+        string $label, 
+
+        array $settings,
+        
+        bool $exit = true 
+        
+    ){
+            
+
+        if( !DetectCli() ){
+
+            
+            $ini = ini_get_all( null, false );
+        
+            $found = 0;
+
+            $length = count( $settings );
+
+
+
+            if( 
+                
+                class_exists( '\VisualKit\Console' ) &&
+
+                class_exists( '\VisualKit\Table' ) 
+                
+            ){
+            
+                $table = new Table();
+
+                    $table->column('Status');
+
+                    $table->column('Settings');
+
+                    $table->column('Require');
+                    
+                    $table->column('Valeur');
+
+
+
+                foreach( $settings as $name => $setting ){
+
+                    $value = $ini[ $name ];
+
+                    $status = IValidator::matching(
+
+                        $setting->validator,
+
+                        $value,
+
+                        $setting->expect,
+
+                        isset( $setting->operator ) ? $setting->operator : '<=',
+
+                    );
+                        
+                    $table->row(
+
+                        ($status),
+
+                        "" . ($name) . "",
+
+                        ("" . $setting->expect ?: 0) . "",
+
+                        "" . ($value) . "",
+                        
+                    );
+
+                    if( $status ){ $found++; }
+
+                }
+
+
+
+
+                if( $found != $length ){
+
+                    VisualKitConsole::error( 
+                        
+                        $label,
+                        
+                        $table->toString(),
+
+                        $exit
+
+                    );
+
+                    return false;
+
+                }
+
+            }
+
+            else{
+
+                foreach( $settings as $name => $setting ){
+
+                    $value = $ini[ $name ];
+
+                    $status = IValidator::matching(
+
+                        $setting->validator,
+
+                        $value,
+
+                        $setting->expect,
+
+                        isset( $setting->operator ) ? $setting->operator : '<=',
+
+                    );
+                        
+                    if( $status ){ $found++; }
+
+                    else{
+
+                        echo $label . " : equires PHP Settings : ( " . ($status ? 'YES' : 'NO') . ") " . $name;
+                        
+                    }
+
+                }
+
+                if( $found != $length ){
+
+                    if( $exit === true ){ exit; }
+
+                    return false;
+
+                }
+                
+            }
+
+
+        }
+            
 
 
         return true;
